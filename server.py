@@ -60,8 +60,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         
         for i, j in ARTICLES.items():
             for k in j["links"]:
-                title = k["title"]
-                links.append(title) 
+                links.append(k["title"]) 
                 
         return links
     
@@ -98,6 +97,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
                 deQueue.append(link)
 
     # findShortestPath:
+    # MAIN WORKER UNIT
     # A function for iterating through the Wikipedia articles and finding the
     # shortest path between two articles. 
     
@@ -119,12 +119,17 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         # deQueue = a double ended queue for iterating through the Wiki pages.
         # starts with the aFrom item
         deQueue.append(aFrom)
+        searchStart = time.time()
         
         while (len(deQueue) != 0):
             # as long as there are items in the queue, get wiki links of the next item
             searchTerm = deQueue.popleft()
             linkThread = threading.Thread(target=getWikiLinks, args=(searchTerm, aTo))
             linkThread.start()
+            loopTime = time.time()
+            if ((loopTime - searchStart) > 420):
+                print(" ### Seven minutes of search has passed. Quitting. ### ")
+                break
             linkThread.join() # Tell other threads to wait for this article check to finish
     
     def precheckArticles(aFrom, aTo):
@@ -158,6 +163,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
     # optimal route between the two.
     # Returns the results.
     def pathfinder(aFrom, aTo, aTime):
+        global resultPath
         # Transform the input titles into proper titles:
         aFrom, aTo = transformSearchTermIntoTitle(aFrom, aTo)
         # Check that the articles are valid for route search:
