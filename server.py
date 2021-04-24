@@ -166,7 +166,9 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
     
     # path is a temporary list of titles between the start and end articles,
     # resultPath is the one that indicates the final path.
-    def findShortestPath(aFrom, aTo):        
+    def findShortestPath(aFrom, aTo, aTime):  
+        global resultPath
+        
         path[aFrom] = [aFrom]
         # deQueue = a double ended queue for iterating through the Wiki pages.
         # starts with the aFrom item
@@ -183,6 +185,19 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
                 print(" ### Seven minutes of search has passed. Quitting. ### ")
                 break
             linkThread.join() # Tell other threads to wait for this article check to finish
+            
+        # Check how long it took to search the path:
+        bTime = time.time()
+        c = bTime - aTime
+        resultPath.append(c)
+        
+        if (len(resultPath) > 1):
+            print("\nPath was found!")
+            for i in resultPath:
+                print("> %s" % i)
+        else:
+            print("\nNo path found!")
+            resultPath = "No path found"
     
     def precheckArticles(aFrom, aTo):
         # CHECK THE NUMBER OF LINKS IN THE START ARTICLE
@@ -211,20 +226,13 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         if (precheckArticles(aFrom, aTo)):
             print("\nGiven start and end articles are valid.\n>>> STARTING PATH SEARCHING >>>\n")
             
-            findShortestPath(aFrom, aTo)
+            clientThread = threading.Thread(target=findShortestPath, args=(aFrom, aTo, aTime))
+            clientThread.start()
+            clientThread.join()
+            return resultPath
             
-            # Check how long it took to search the path:
-            bTime = time.time()
-            c = bTime - aTime
-            
-            if (len(resultPath) != 0):
-                print("\nPath was found!")
-            else:
-                print("\nNo path found!")
-                resultPath = "No path found"
-            return resultPath, c
         else:
-            return "Article failed at pre-check", 0
+            return "Article failed at pre-check"
     
     #### REGISTER FUNCTIONS ####
     server.register_function(pathfinder)
