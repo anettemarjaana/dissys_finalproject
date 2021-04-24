@@ -7,6 +7,7 @@ from xmlrpc.server import SimpleXMLRPCServer # for building the XML RPC server
 import xml.etree.ElementTree as ET # for parsing the database (XML-file)
 import requests # for HTTP requests (Wikipedia application programming interface)
 import time # for timestamps
+from pprint import pprint # for json object prints
 
 path = {}
 resultPath = {}
@@ -22,8 +23,8 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
     
     #### CREATE NECESSARY FUNCTIONS  ####
      
-    # getWikiURL: Function for getting the wikipedia article link
-    def getWikiURL(searchTerm):
+    # getWikiTitle: Function for getting the wikipedia article title
+    def getWikiTitle(searchTerm):
          #### SET UP REQUESTS FOR WIKIPEDIA OPENSEARCH ####
         S = requests.Session()
         URL = "https://en.wikipedia.org/w/api.php"
@@ -36,10 +37,12 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
             "search": searchTerm
         }
         # Make the query in the Wiki API
-        dataSet = S.get(url=URL, params=PARAMS).json()
-        # get wikiPageUrl out: It's the first item in the last array of dataSet
-        wikiPageUrl = dataSet[-1][0]
-        return wikiPageUrl
+        dataSet = S.get(url=URL, params=PARAMS).json()      
+        # get wikiPageUrl out: It's the first item in the first array of DATA
+        wikiTitle = dataSet[1][0]
+        print("Wiki title: %s" % wikiTitle)
+        
+        return wikiTitle
      
         
     def wikiLinksRequest(searchTerm):         
@@ -48,20 +51,45 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         S = requests.Session()
         URL = "https://en.wikipedia.org/w/api.php"
         links = []
-        PARAMS = {
+        PARAMS = { # prop: extlinks for external links
             "action": "query",
             "format": "json",
             "prop": "links",
+            "pllimit": "max",
             "titles": searchTerm
         }
         # Get response R:
         DATA = S.get(url=URL, params=PARAMS).json()
         ARTICLES = DATA["query"]["pages"]
-        
+    
         for i, j in ARTICLES.items():
-            for k in j["links"]:
-                links.append(k["title"]) 
-                
+            try:
+                for link in j["links"]:
+                    title = link["title"]
+                    links.append(title) 
+            except KeyError as error:
+                print("Can not find "+str(error))
+                pass
+        
+        # If there are more than 500 links in the article, the query
+        # returns "continue" key. Let's keep making new requests
+        # until the key is not returned anymore:
+        while ("continue" in DATA):
+            plcontinue = DATA["continue"]["plcontinue"]
+            PARAMS["plcontinue"] = plcontinue
+            
+            DATA = S.get(url=URL, params=PARAMS).json()
+            ARTICLES = DATA["query"]["pages"]
+            
+            for i, j in ARTICLES.items():
+                try:
+                    for link in j["links"]:
+                        title = link["title"]
+                        links.append(title) 
+                except KeyError as error:
+                    # Can not find "links" ob in the article object
+                    pass
+           
         return links
     
     # getWikiLinks:
@@ -79,22 +107,23 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         global resultPath
         global deQueue
         
-        for link in links:
-            if (link in aTo):
-                # If the link is the "end article" of the path:
-                # empty the list of articles to check
-                deQueue = deque() 
-                # resultPath is the path to be returned
-                resultPath = path[searchTerm] + [link]
-                # empty temporary path list
-                path = {}
-                print("aTo was reached!")
-                break
-            if (link not in path) and (link != searchTerm):
-            # If not, check if this link is already in the path.
-            # If it's not ---> add it on queue to be checked
-                path[link] = path[searchTerm] + [link]
-                deQueue.append(link)
+        if (len(links) > 0):
+            for link in links:
+                if (link == aTo):
+                    # If the link is the "end article" of the path:
+                    # empty the list of articles to check
+                    deQueue = deque() 
+                    # resultPath is the path to be returned
+                    resultPath = path[searchTerm] + [link]
+                    # empty temporary path list
+                    path = {}
+                    print("aTo was reached!")
+                    break
+                if (link not in path) and (link != searchTerm):
+                # If not, check if this link is already in the path.
+                # If it's not ---> add it on queue to be checked
+                    path[link] = path[searchTerm] + [link]
+                    deQueue.append(link)
 
     # findShortestPath:
     # MAIN WORKER UNIT
@@ -142,19 +171,6 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
        
         # IF THE START PAGE IS NO DEAD END:
         return True
-
-    def transformSearchTermIntoTitle(aFrom, aTo):
-        i = 0
-        newTitles = []
-        for article in [aFrom, aTo]:
-            article = getWikiURL(article) # in URL form
-            print(article)
-            splitList = article.split("/") # https://en.wikipedia.org/wiki/Compartmental_models_in_epidemiology
-            newTitles.append(splitList[-1])
-            i += 1
-        aFrom = newTitles[0]
-        aTo = newTitles[1]
-        return aFrom, aTo
     
     # pathfinder:
     # A function that handles the path finding on the server side.
@@ -165,7 +181,8 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
     def pathfinder(aFrom, aTo, aTime):
         global resultPath
         # Transform the input titles into proper titles:
-        aFrom, aTo = transformSearchTermIntoTitle(aFrom, aTo)
+        aFrom = getWikiTitle(aFrom)
+        aTo = getWikiTitle(aTo)
         # Check that the articles are valid for route search:
         if (precheckArticles(aFrom, aTo)):
             print("\nGiven start and end articles are valid.\n>>> STARTING PATH SEARCHING >>>\n")

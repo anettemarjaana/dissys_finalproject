@@ -34,14 +34,22 @@ if __name__ == "__main__":
                 print("\n--- Find the shortest path between two Wikipedia articles ---")
                 aFrom = input("From: ")
                 aTo = input("To: ")
-                aTime = time.time()
-                # Bring these to the server. Search the path on server.py
-                resultPath, c = s.pathfinder(aFrom, aTo, aTime)
-                # Parse and print the result here
-                print("\nTime it took in seconds: %s" % c)
-                print("\n--- Path length: %s ----" % len(resultPath))
-                for i in resultPath:
-                    print(i)
+                
+                if (len(aFrom) < 1 or len(aTo) < 1):
+                    print("Invalid input! Enter a valid article.")
+                else:
+                    aTime = time.time()
+                    # Bring these to the server. Search the path on server.py
+                    try:
+                        resultPath, c = s.pathfinder(aFrom, aTo, aTime)
+                        # Parse and print the result here
+                        print("\nTime it took in seconds: %s" % c)
+                        print("\n--- Path length: %s ----" % len(resultPath))
+                        for i in resultPath:
+                            print(i)
+                    except KeyboardInterrupt: # not working now, no response
+                        print("\nBye bye client!")
+                        sys.exit(0)
                 
                 print(instructions)
                 
