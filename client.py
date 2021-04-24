@@ -43,10 +43,10 @@ if __name__ == "__main__":
                     try:
                         resultPath, c = s.pathfinder(aFrom, aTo, aTime)
                         # Parse and print the result here
-                        print("\nTime it took in seconds: %s" % c)
-                        print("\n--- Path length: %s ----" % len(resultPath))
+                        print("\n--- Path length: %s ---" % len(resultPath))
                         for i in resultPath:
-                            print(i)
+                            print("> %s" % i)
+                        print("--- Time it took in seconds: %s ---" % round(c, 2))
                     except KeyboardInterrupt: # not working now, no response
                         print("\nBye bye client!")
                         sys.exit(0)

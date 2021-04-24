@@ -45,7 +45,12 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         return wikiTitle
      
         
-    def wikiLinksRequest(searchTerm):         
+    def wikiLinksRequest(searchTerm):        
+        # The time it takes for the wiki link request of one article
+        # is being measured in order to avoid the program getting stuck
+        # at checking one article. It should not take longer than max
+        # 40 seconds per article
+        searchStart = time.time()
         #### SET UP REQUESTS FOR WIKIPEDIA OPENSEARCH ####
         # one request per searchTerm
         S = requests.Session()
@@ -65,12 +70,17 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         for i, j in ARTICLES.items():
             try:
                 for link in j["links"]:
+                    loopTime = time.time()
+                    if ((loopTime - searchStart) > 40):
+                        print(" ### 40 s has passed on request of searchterm: %s. Quitting wikiLinksRequest. ### " % searchTerm)
+                        return links
                     title = link["title"]
                     links.append(title) 
             except KeyError as error:
-                print("Can not find "+str(error))
+                # links can not be found in the article object
                 pass
         
+
         # If there are more than 500 links in the article, the query
         # returns "continue" key. Let's keep making new requests
         # until the key is not returned anymore:
@@ -84,6 +94,10 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
             for i, j in ARTICLES.items():
                 try:
                     for link in j["links"]:
+                        loopTime = time.time()
+                        if ((loopTime - searchStart) > 60):
+                            print(" ### 40 s has passed on request of searchterm: %s. Quitting wikiLinksRequest. ### " % searchTerm)
+                            return links
                         title = link["title"]
                         links.append(title) 
                 except KeyError as error:
@@ -102,13 +116,22 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         handleThread.join()
 
     # A function for handling links on a specific page
-    def handleWikiLinks(searchTerm, aTo, links):         
+    def handleWikiLinks(searchTerm, aTo, links):        
+        # The time it takes for the links handling of one article
+        # is being measured in order to avoid the program getting stuck
+        # at checking one article. It should not take longer than max
+        # 40 seconds per article
+        searchStart = time.time() 
         global path
         global resultPath
         global deQueue
         
         if (len(links) > 0):
             for link in links:
+                loopTime = time.time()
+                if ((loopTime - searchStart) > 40):
+                    print(" ### 40 s has passed on request of searchterm: %s. Quitting handleWikiLinks. ### " % searchTerm)
+                    break
                 if (link == aTo):
                     # If the link is the "end article" of the path:
                     # empty the list of articles to check
@@ -172,6 +195,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         # IF THE START PAGE IS NO DEAD END:
         return True
     
+        
     # pathfinder:
     # A function that handles the path finding on the server side.
     # Receives user-given parameters from the client.
@@ -186,6 +210,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         # Check that the articles are valid for route search:
         if (precheckArticles(aFrom, aTo)):
             print("\nGiven start and end articles are valid.\n>>> STARTING PATH SEARCHING >>>\n")
+            
             findShortestPath(aFrom, aTo)
             
             # Check how long it took to search the path:
