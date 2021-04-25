@@ -42,11 +42,11 @@ if __name__ == "__main__":
                     # Bring these to the server. Search the path on server.py
                     try:
                         resultPath = s.pathfinder(aFrom, aTo, aTime)
-                        c = resultPath[-1]
                         # Parse and print the result here
                         print("\n--- Path length: %s ---" % len(resultPath))
                         for i in [resultPath[0], resultPath[-2]]:
                             print("> %s" % i)
+                        c = resultPath[-1]
                         print("--- Time it took in seconds: %s ---" % round(c, 2))
                     except KeyboardInterrupt: # not working now, no response
                         print("\nBye bye client!")

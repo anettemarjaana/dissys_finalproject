@@ -126,6 +126,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         global resultPath
         global deQueue
         
+        # Logic of this loop is from: https://github.com/stong1108/WikiRacer/blob/master/wikiracer.py 
         if (len(links) > 0):
             for link in links:
                 loopTime = time.time()
