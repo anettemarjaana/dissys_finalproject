@@ -4,7 +4,6 @@ import sys # for catching errors
 import threading # for performing multiple tasks at once
 from collections import deque # for double ended queue needed in iterating thru Wiki pages
 from xmlrpc.server import SimpleXMLRPCServer # for building the XML RPC server
-import xml.etree.ElementTree as ET # for parsing the database (XML-file)
 import requests # for HTTP requests (Wikipedia application programming interface)
 import time # for timestamps
 from pprint import pprint # for json object prints
@@ -38,9 +37,13 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         }
         # Make the query in the Wiki API
         dataSet = S.get(url=URL, params=PARAMS).json()      
-        # get wikiPageUrl out: It's the first item in the first array of DATA
-        wikiTitle = dataSet[1][0]
-        print("Wiki title: %s" % wikiTitle)
+        # get wikiPageUrl out: It's the first item in the second array of DATA
+        
+        if (dataSet[1]):
+            wikiTitle = dataSet[1][0]
+            print("Wiki title: %s" % wikiTitle)
+        else:
+            wikiTitle = ""
         
         return wikiTitle
      
@@ -175,6 +178,8 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
     # resultPath is the one that indicates the final path.
     def findShortestPath(aFrom, aTo, aTime):  
         global resultPath
+        global path
+        global deQueue
         
         resultPath = {} # make sure the resultpath is empty when started
         path[aFrom] = [aFrom]
@@ -192,39 +197,53 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
             if ((loopTime - searchStart) > 420):
                 print(" ### Seven minutes of search has passed. Quitting. ### ")
                 break
-             # Tell other threads to wait for this article check to finish.
-             # One article link thread can only take max 30 seconds.
-            linkThread.join(30)
+             
             # If the link thread is dead, return it finished.
             if (not linkThread.is_alive()):
                 print("Link thread dead. Returning.")
                 linkThread.handled = True
+                
+            # Tell other threads to wait for this article check to finish.
+             # One article link thread can only take max 30 seconds.
+            linkThread.join(30)
             
         
         if (len(resultPath) > 1):
-            print("\nPath was found!")
+            # Check how long it took to search the path:
+            bTime = time.time()
+            c = bTime - aTime
+            # add the execution time in the resultPath set
+            resultPath.append(c)
+            
+            print("\nPath was found!\n")
             for i in resultPath:
                 print("> %s" % i)
+                
         else:
+            # empty article queue and path
+            deQueue = deque() 
+            path = {}
+            # print result on server and client
             noneFound = "No path found"
             print(noneFound)
-            resultPath[noneFound] = [noneFound]
+            resultPath = noneFound
             
-        # Check how long it took to search the path:
-        bTime = time.time()
-        c = bTime - aTime
-        resultPath.append(c)
     
     def precheckArticles(aFrom, aTo):
-        # CHECK THE NUMBER OF LINKS IN THE START ARTICLE
-        aLinks = wikiLinksRequest(aFrom)
-        
-        if (len(aLinks) == 0):
-            print("The start page does not contain any links!")
+        # CHECK THAT BOTH SEARCH TERMS RESULTED IN A VALID WIKI ARTICLE
+        if (len(aFrom) < 1 or len(aTo) < 1):
             return False
-       
-        # IF THE START PAGE IS NO DEAD END:
-        return True
+        
+        else: # if lengths of both titles are >= 1:
+            # CHECK THE NUMBER OF LINKS IN THE START ARTICLE
+            aLinks = wikiLinksRequest(aFrom)
+            
+            if (len(aLinks) == 0):
+                print("The start page does not contain any links!")
+                return False
+           
+            # IF THE START PAGE IS NO DEAD END:
+            return True
     
         
     # pathfinder:
@@ -236,6 +255,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
     def pathfinder(aFrom, aTo, aTime):
         global resultPath
         # Transform the input titles into proper titles:
+        print("\n### New search! ###")
         aFrom = getWikiTitle(aFrom)
         aTo = getWikiTitle(aTo)
         # Check that the articles are valid for route search:
@@ -246,7 +266,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
             return resultPath
             
         else:
-            return "Article failed at pre-check"
+            return "No valid Wiki article found with this search term!"
     
     #### REGISTER FUNCTIONS ####
     server.register_function(pathfinder)

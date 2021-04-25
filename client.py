@@ -46,15 +46,21 @@ if __name__ == "__main__":
                     # Bring these to the server. Search the path on server.py
                     try:
                         resultPath = s.pathfinder(aFrom, aTo, aTime)
+                        
+                        # resultPath is just a string if no path found:
+                        if (isinstance(resultPath, str)):
+                            print(resultPath)
+                        else:
+                            links = len(resultPath)-1
+                            c = resultPath.pop()
+                            # Parse and print the result here
+                            print("\n--- Path length: %s ---" % links)
+                            for i in resultPath:
+                                print("> %s" % i)
+                            print("--- Time it took in seconds: %s ---" % round(c, 2))
+                                  
                         # Make a sound when resultPath has been found!
                         winsound.Beep(freq, duration)
-                        links = len(resultPath)-1
-                        c = resultPath.pop()
-                        # Parse and print the result here
-                        print("\n--- Path length: %s ---" % links)
-                        for i in resultPath:
-                            print("> %s" % i)
-                        print("--- Time it took in seconds: %s ---" % round(c, 2))
                     except KeyboardInterrupt: # not working now, no response
                         print("\nBye bye client!")
                         sys.exit(0)
