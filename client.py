@@ -37,7 +37,9 @@ if __name__ == "__main__":
                 aTo = input("To: ")
                 
                 if (len(aFrom) < 1 or len(aTo) < 1):
-                    print("Invalid input! Enter a valid article.")
+                    print("Invalid input! Enter a valid article.\n")
+                elif (aFrom == aTo):
+                    print("Invalid input! Make sure the articles are not the same.\n")
                 else:
                     aTime = time.time()
                     # sound specs:

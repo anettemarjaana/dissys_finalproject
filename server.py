@@ -235,6 +235,10 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         if (len(aFrom) < 1 or len(aTo) < 1):
             return False
         
+        # CHECK WHETHER THE ARTICLES ARE THE SAME
+        elif (aFrom == aTo):
+            return False
+        
         else: # if lengths of both titles are >= 1:
             # CHECK THE NUMBER OF LINKS IN THE START ARTICLE
             aLinks = wikiLinksRequest(aFrom)
@@ -267,7 +271,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
             return resultPath
             
         else:
-            return "No valid Wiki article found with this search term!"
+            return "No valid path can be found with this search term!"
     
     #### REGISTER FUNCTIONS ####
     server.register_function(pathfinder)
