@@ -195,6 +195,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
             linkThread.start()
             loopTime = time.time()
             if ((loopTime - searchStart) > 420):
+                linkThread.join()
                 print(" ### Seven minutes of search has passed. Quitting. ### ")
                 break
              
