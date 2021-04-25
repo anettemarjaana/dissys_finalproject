@@ -3,6 +3,7 @@
 import sys # for catching errors
 from xmlrpc.client import ServerProxy # for allowing clients to join the XML RCP server
 import time # for timestamps
+import winsound # for making a sound on Windows when the path has been printed
 
  #### CONNECTING CLIENTS ####    with server through a proxy:
 s = ServerProxy("http://localhost:3000")
@@ -39,14 +40,20 @@ if __name__ == "__main__":
                     print("Invalid input! Enter a valid article.")
                 else:
                     aTime = time.time()
+                    # sound specs:
+                    duration = 1000
+                    freq = 440
                     # Bring these to the server. Search the path on server.py
                     try:
                         resultPath = s.pathfinder(aFrom, aTo, aTime)
+                        # Make a sound when resultPath has been found!
+                        winsound.Beep(freq, duration)
+                        links = len(resultPath)-1
+                        c = resultPath.pop()
                         # Parse and print the result here
-                        print("\n--- Path length: %s ---" % len(resultPath))
-                        for i in [resultPath[0], resultPath[-2]]:
+                        print("\n--- Path length: %s ---" % links)
+                        for i in resultPath:
                             print("> %s" % i)
-                        c = resultPath[-1]
                         print("--- Time it took in seconds: %s ---" % round(c, 2))
                     except KeyboardInterrupt: # not working now, no response
                         print("\nBye bye client!")

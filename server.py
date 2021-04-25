@@ -105,15 +105,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
                     pass
            
         return links
-    
-    # getWikiLinks:
-    # A function for getting all links in a wiki article with a search term.
-    # Is ran in a thread and also starts a thread.
-    def getWikiLinks(searchTerm, aTo):
-        links = wikiLinksRequest(searchTerm)
-        handleThread = threading.Thread(target=handleWikiLinks, args=(searchTerm, aTo, links))
-        handleThread.start()
-        handleThread.join()
+
 
     # A function for handling links on a specific page
     def handleWikiLinks(searchTerm, aTo, links):        
@@ -149,6 +141,20 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
                     path[link] = path[searchTerm] + [link]
                     deQueue.append(link)
 
+    # getWikiLinks:
+    # A function for getting all links in a wiki article with a search term.
+    # It is ran in a thread and also starts a thread.
+    def getWikiLinks(searchTerm, aTo):
+        # Request links of the specific Wiki article:
+        links = wikiLinksRequest(searchTerm)
+        # Handle the links of the article:
+        handleThread = threading.Thread(target=handleWikiLinks, args=(searchTerm, aTo, links))
+        handleThread.start()
+        handleThread.join()
+        # once finished, return to findShortestPath to fetch another article
+        # in the queue to check
+
+    
     # findShortestPath:
     # MAIN WORKER UNIT
     # A function for iterating through the Wikipedia articles and finding the
@@ -170,6 +176,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
     def findShortestPath(aFrom, aTo, aTime):  
         global resultPath
         
+        resultPath = {} # make sure the resultpath is empty when started
         path[aFrom] = [aFrom]
         # deQueue = a double ended queue for iterating through the Wiki pages.
         # starts with the aFrom item
@@ -185,20 +192,28 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
             if ((loopTime - searchStart) > 420):
                 print(" ### Seven minutes of search has passed. Quitting. ### ")
                 break
-            linkThread.join() # Tell other threads to wait for this article check to finish
+             # Tell other threads to wait for this article check to finish.
+             # One article link thread can only take max 30 seconds.
+            linkThread.join(30)
+            # If the link thread is dead, return it finished.
+            if (not linkThread.is_alive()):
+                print("Link thread dead. Returning.")
+                linkThread.handled = True
             
-        # Check how long it took to search the path:
-        bTime = time.time()
-        c = bTime - aTime
-        resultPath.append(c)
         
         if (len(resultPath) > 1):
             print("\nPath was found!")
             for i in resultPath:
                 print("> %s" % i)
         else:
-            print("\nNo path found!")
-            resultPath = "No path found"
+            noneFound = "No path found"
+            print(noneFound)
+            resultPath[noneFound] = [noneFound]
+            
+        # Check how long it took to search the path:
+        bTime = time.time()
+        c = bTime - aTime
+        resultPath.append(c)
     
     def precheckArticles(aFrom, aTo):
         # CHECK THE NUMBER OF LINKS IN THE START ARTICLE
@@ -227,9 +242,7 @@ with SimpleXMLRPCServer(('localhost', 3000)) as server:
         if (precheckArticles(aFrom, aTo)):
             print("\nGiven start and end articles are valid.\n>>> STARTING PATH SEARCHING >>>\n")
             
-            clientThread = threading.Thread(target=findShortestPath, args=(aFrom, aTo, aTime))
-            clientThread.start()
-            clientThread.join()
+            findShortestPath(aFrom, aTo, aTime)
             return resultPath
             
         else:
