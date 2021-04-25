@@ -6,7 +6,6 @@ from collections import deque # for double ended queue needed in iterating thru 
 from xmlrpc.server import SimpleXMLRPCServer # for building the XML RPC server
 import requests # for HTTP requests (Wikipedia application programming interface)
 import time # for timestamps
-from pprint import pprint # for json object prints
 
 path = {}
 resultPath = {}
